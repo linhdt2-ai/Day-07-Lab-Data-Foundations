@@ -241,6 +241,7 @@ Neu lam lai, toi se tach tai lieu dai theo cau truc domain thay vi chi chunk the
 | Results | Ca nhan | 8 / 10 |
 | Core implementation (tests) | Ca nhan | 30 / 30 |
 | Demo | Nhom | 4 / 5 |
-| **Tong** | | **82 / 90 + [Can xac nhan cach quy doi tong 100]** |
+| **Tong diem tho** | | **82 / 90** |
+| **Tong quy doi thang 100** | | **91.1 / 100** |
 
-Ghi chu: neu giang vien yeu cau tong hop dung theo thang 100 va khong co dieu chinh giua diem nhom/ca nhan, muc tong can duoc xac nhan lai tu rubric chinh thuc.
+Ghi chu: Tong diem tu danh gia duoc quy doi tu thang 90 sang thang 100 theo cong thuc: diem quy doi = diem dat duoc / diem toi da x 100.
