@@ -1,5 +1,11 @@
 # Phase 2 Benchmark Results
 
+**Ho ten:** Hoàng Trọng Vĩnh  
+**Nhom:** Bàn D5  
+**Ngay:** 05/06/2026
+
+---
+
 ## Dataset
 
 Danh sach file da dung:
