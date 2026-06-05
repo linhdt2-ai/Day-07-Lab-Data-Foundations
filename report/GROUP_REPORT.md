@@ -1,7 +1,7 @@
 # Báo Cáo Kết Quả Nhóm (Group Report) - Phase 2
 **Môn học:** Lab 7 - Embedding & Vector Store (Day 07)  
 **Nhóm:** D5  
-**Thành viên:** Đỗ Đức Tuệ, Nguyễn Thái Dương, Nguyễn Hải Quân, Trần Quang Thanh, Dương Thế Linh  
+**Thành viên:** Đỗ Đức Tuệ, Nguyễn Thái Dương, Nguyễn Hải Quân, Trần Quang Thanh, Dương Thế Linh ,Hoàng Trọng Vĩnh
 **Ngày thực hiện:** 05/06/2026  
 
 ---
