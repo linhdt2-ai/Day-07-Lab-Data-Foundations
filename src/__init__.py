@@ -5,6 +5,7 @@ from .chunking import (
     RecursiveChunker,
     SentenceChunker,
     compute_similarity,
+    HanoiTransitChunker,
 )
 from .embeddings import (
     EMBEDDING_PROVIDER_ENV,
@@ -23,6 +24,7 @@ __all__ = [
     "FixedSizeChunker",
     "SentenceChunker",
     "RecursiveChunker",
+    "HanoiTransitChunker",
     "ChunkingStrategyComparator",
     "compute_similarity",
     "EmbeddingStore",
