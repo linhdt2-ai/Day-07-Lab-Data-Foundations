@@ -1,8 +1,8 @@
 # Báo Cáo Lab 7: Embedding & Vector Store
 
-**Họ tên:** [Tên sinh viên]
-**Nhóm:** [Tên nhóm]
-**Ngày:** [Ngày nộp]
+**Họ tên:** [Nguyễn Thái Dương - 2A202600547]
+**Nhóm:** [Nhóm D5]
+**Ngày:** [05/06/2026]
 
 ---
 
