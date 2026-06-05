@@ -90,66 +90,42 @@
 
 ### Baseline Analysis
 
-Chạy `ChunkingStrategyComparator().compare()` trên 2-3 tài liệu:
+Tôi so sánh ba chiến lược chunking có sẵn trong package:
 
-| Tài liệu             | Strategy                         | Chunk Count | Avg Length | Preserves Context?            |
-| -------------------- | -------------------------------- | ----------- | ---------- | ----------------------------- |
-| python_intro.txt     | FixedSizeChunker (`fixed_size`)  | 5           | ~389       | Thấp – cắt giữa câu           |
-| python_intro.txt     | SentenceChunker (`by_sentences`) | 3           | ~648       | Cao – nguyên câu              |
-| python_intro.txt     | RecursiveChunker (`recursive`)   | 4           | ~486       | Trung bình – ưu tiên đoạn văn |
-| rag_system_design.md | FixedSizeChunker (`fixed_size`)  | 6           | ~399       | Thấp – cắt giữa đoạn          |
-| rag_system_design.md | SentenceChunker (`by_sentences`) | 5           | ~478       | Cao – giữ nguyên câu          |
-| rag_system_design.md | RecursiveChunker (`recursive`)   | 4           | ~598       | Cao – ưu tiên `\n\n`          |
+| Strategy | Cách hoạt động | Điểm mạnh | Điểm yếu |
+|----------|----------------|-----------|----------|
+| FixedSizeChunker | Cắt theo số ký tự cố định, có overlap. | Dễ kiểm soát kích thước, đơn giản. | Dễ cắt ngang câu hoặc đoạn luật/tuyến xe. |
+| SentenceChunker | Tách theo câu rồi gom nhiều câu thành chunk. | Dễ đọc, giữ ranh giới câu. | Không tối ưu với bảng tuyến xe hoặc tài liệu pháp lý dài. |
+| RecursiveChunker | Ưu tiên tách theo đoạn, dòng, câu, từ, rồi ký tự. | Giữ cấu trúc tài liệu tốt nhất, phù hợp markdown/text dài. | Cần chọn `chunk_size` hợp lý. |
 
 ### Strategy Của Tôi
 
-**Loại:** SentenceChunker (`by_sentences`)
+**Loại:** `RecursiveChunker(chunk_size=2500)` kết hợp Gemini embedding thật.
 
 **Mô tả cách hoạt động:**
-
-> `SentenceChunker` phát hiện ranh giới câu bằng regex — split tại các dấu `. `, `! `, `? `, hoặc `.\n`. Các câu được gom thành nhóm tối đa `max_sentences_per_chunk` câu, sau đó mỗi nhóm trở thành một chunk riêng. Whitespace thừa ở đầu/cuối mỗi chunk được strip đi. Edge case như câu cuối không kết thúc bằng dấu chấm hoặc văn bản chỉ có 1 câu được xử lý bằng cách giữ nguyên phần còn lại.
+> `RecursiveChunker` cố gắng chia nhỏ văn bản bằng cách sử dụng danh sách các dấu phân tách có thứ tự ưu tiên giảm dần: đoạn văn (`\n\n`), dòng (`\n`), câu (`. `), từ (` `) và ký tự (``). Với kích thước chunk lớn `chunk_size=2500`, thuật toán giữ nguyên vẹn các phần lớn chứa lộ trình tuyến xe hoặc các điều luật mà không làm chia cắt thông tin.
 
 **Tại sao tôi chọn strategy này cho domain nhóm?**
+> Bộ dữ liệu nhóm chứa nhiều loại cấu trúc khác nhau (danh sách tuyến, điều luật giáo dục dài). Chiến lược đệ quy giúp tôn trọng cấu trúc tự nhiên của văn bản. Việc chọn `chunk_size=2500` giúp giới hạn tổng số chunk của cả bộ dữ liệu xuống còn 74 chunks (thay vì 4.638 chunks nếu dùng size=500), làm giảm thiểu tối đa hiện tượng nhiễu (noise) khi tìm kiếm.
 
-> Tài liệu kỹ thuật AI/ML thường viết theo cấu trúc câu rõ ràng, mỗi câu mang một ý hoàn chỉnh (ví dụ: định nghĩa một khái niệm, mô tả một bước). Việc chunk theo câu đảm bảo mỗi chunk không bị cắt giữa ý, giúp embedding model mã hoá được toàn bộ ý nghĩa. Domain hỗ trợ khách hàng và thiết kế hệ thống cũng có câu đầy đủ nghĩa — user query thường khớp với một câu cụ thể hơn là một đoạn văn cắt ngang.
+### So Sánh Với Baseline
 
-**Code snippet (nếu custom):**
-
-```python
-import re
-
-class SentenceChunker:
-    def __init__(self, max_sentences_per_chunk: int = 3) -> None:
-        self.max_sentences_per_chunk = max(1, max_sentences_per_chunk)
-
-    def chunk(self, text: str) -> list[str]:
-        # Tách câu bằng regex: split sau ". ", "! ", "? ", ".\n"
-        sentences = re.split(r'(?<=[.!?])\s+|(?<=\.)\n', text.strip())
-        sentences = [s.strip() for s in sentences if s.strip()]
-
-        chunks = []
-        for i in range(0, len(sentences), self.max_sentences_per_chunk):
-            group = sentences[i : i + self.max_sentences_per_chunk]
-            chunks.append(" ".join(group).strip())
-        return chunks
-```
-
-### So Sánh: Strategy của tôi vs Baseline
-
-| Tài liệu             | Strategy                         | Chunk Count | Avg Length | Retrieval Quality?       |
-| -------------------- | -------------------------------- | ----------- | ---------- | ------------------------ |
-| python_intro.txt     | FixedSizeChunker (best baseline) | 5           | 389        | Trung bình – cắt câu     |
-| python_intro.txt     | **SentenceChunker (của tôi)**    | **3**       | **648**    | **Cao – câu nguyên vẹn** |
-| rag_system_design.md | RecursiveChunker (best baseline) | 4           | 598        | Trung bình-cao           |
-| rag_system_design.md | **SentenceChunker (của tôi)**    | **5**       | **478**    | **Cao – câu rõ nghĩa**   |
+| Cấu hình | Embedding | Stored chunks | Retrieval top-3 trên 5 query nhóm | Nhận xét |
+|----------|-----------|---------------|------------------------------------|----------|
+| Baseline | `_mock_embed` + RecursiveChunker | 74 chunks | 2 / 5 relevant | Mock embedding không có ý nghĩa ngữ nghĩa thực tế nên kết quả truy xuất còn nhiễu. |
+| Strategy của tôi | Gemini `gemini-embedding-2` | 74 chunks | **5 / 5 relevant** | Kết quả hoàn hảo, tìm chính xác đoạn chứa câu trả lời với điểm tương đồng cao. |
 
 ### So Sánh Với Thành Viên Khác
 
-| Thành viên   | Strategy                     | Retrieval Score (/10) | Điểm mạnh                                      | Điểm yếu                                           |
-| ------------ | ---------------------------- | --------------------- | ---------------------------------------------- | -------------------------------------------------- |
-| Tôi          | SentenceChunker(max=3)       | 8                     | Giữ được câu nguyên vẹn, ít bị nhiễu chéo file | Thất bại với văn bản luật (cắt sai tại `a.`, `b.`) |
-| Thành viên B | RecursiveChunker(500)        | 4                     | Tôn trọng cấu trúc đoạn văn                    | Quá nhiều chunks (gấp 8x) với file lớn, nhiễu nặng |
-| Thành viên C | FixedSizeChunker(400, ol=80) | 10                    | Tốt nhất trên tổng thể (5/5 queries hit)       | Đôi khi cắt giữa câu nhưng overlap giúp bù đắp     |
+Trong nhóm D5, các thành viên đã chạy benchmark các chiến lược khác nhau trên cùng 7 file dữ liệu:
+
+| Thành viên | Strategy | Retrieval Score | Điểm mạnh | Điểm yếu |
+|---|---|:---:|---|---|
+| **Tôi (Nguyễn Hải Quân)** | RecursiveChunker (2500) + Gemini | **10 / 10** | Điểm số tương đồng ngữ nghĩa thật cao, không bị bùng nổ số lượng chunk. | Yêu cầu API key và kết nối mạng để tạo embedding. |
+| **Dương Thế Linh** | SentenceChunker (max=3) | **8 / 10** | Giữ câu nguyên vẹn, tốt cho văn xuôi. | Thất bại ở tài liệu pháp lý vì cắt sai tại các dấu viết tắt `a.`, `b.`. |
+| **Trần Quang Thanh** | HanoiTransitChunker (Custom) | **8 / 10** | Giữ nguyên vẹn toàn bộ lộ trình tuyến xe buýt. | Bị nhiễu chéo sang file pháp lý lớn nếu không lọc metadata trước. |
+| **Đỗ Đức Tuệ & Thái Dương** | RecursiveChunker (size=500) | **4 / 10** | Giữ cấu trúc phân mảnh nhỏ. | Tạo ra quá nhiều chunk (4.638 chunks) gây nhiễu nặng dưới MockEmbedder. |
+| **Hoàng Trọng Vĩnh** | FixedSizeChunker (400, ol=80) | **10 / 10** | Số lượng chunk ổn định (525 chunks), có overlap bù đắp khi bị cắt câu. | Cắt cơ học không theo ngữ nghĩa. |
 
 **Strategy nào tốt nhất cho domain này? Tại sao?**
 
