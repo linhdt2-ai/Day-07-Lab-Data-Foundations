@@ -47,8 +47,18 @@ class SentenceChunker:
         self.max_sentences_per_chunk = max(1, max_sentences_per_chunk)
 
     def chunk(self, text: str) -> list[str]:
-        # TODO: split into sentences, group into chunks
-        raise NotImplementedError("Implement SentenceChunker.chunk")
+        if not text or not text.strip():
+            return []
+        # Split tại ranh giới câu: sau dấu . ! ? hoặc .\n
+        raw = re.split(r'(?<=[.!?]) +|(?<=\.)\n', text.strip())
+        sentences = [s.strip() for s in raw if s.strip()]
+        if not sentences:
+            return []
+        chunks: list[str] = []
+        for i in range(0, len(sentences), self.max_sentences_per_chunk):
+            group = sentences[i : i + self.max_sentences_per_chunk]
+            chunks.append(" ".join(group).strip())
+        return chunks
 
 
 class RecursiveChunker:
@@ -66,12 +76,44 @@ class RecursiveChunker:
         self.chunk_size = chunk_size
 
     def chunk(self, text: str) -> list[str]:
-        # TODO: implement recursive splitting strategy
-        raise NotImplementedError("Implement RecursiveChunker.chunk")
+        if not text:
+            return []
+        results = self._split(text, list(self.separators))
+        return [c for c in results if c and c.strip()]
 
     def _split(self, current_text: str, remaining_separators: list[str]) -> list[str]:
-        # TODO: recursive helper used by RecursiveChunker.chunk
-        raise NotImplementedError("Implement RecursiveChunker._split")
+        # Base case: text nhỏ hơn chunk_size → giữ nguyên
+        if len(current_text) <= self.chunk_size:
+            return [current_text]
+        # Hết separator mà text vẫn dài → trả về nguyên
+        if not remaining_separators:
+            return [current_text]
+
+        sep = remaining_separators[0]
+        rest = remaining_separators[1:]
+
+        # Separator rỗng "" → split từng ký tự theo chunk_size
+        if sep == "":
+            return [
+                current_text[i : i + self.chunk_size]
+                for i in range(0, len(current_text), self.chunk_size)
+            ]
+
+        # Separator không có trong text → thử separator tiếp theo
+        if sep not in current_text:
+            return self._split(current_text, rest)
+
+        # Split theo separator và đệ quy từng phần
+        parts = current_text.split(sep)
+        result: list[str] = []
+        for part in parts:
+            if not part:
+                continue
+            if len(part) <= self.chunk_size:
+                result.append(part)
+            else:
+                result.extend(self._split(part, rest))
+        return result
 
 
 def _dot(a: list[float], b: list[float]) -> float:
@@ -86,13 +128,28 @@ def compute_similarity(vec_a: list[float], vec_b: list[float]) -> float:
 
     Returns 0.0 if either vector has zero magnitude.
     """
-    # TODO: implement cosine similarity formula
-    raise NotImplementedError("Implement compute_similarity")
+    mag_a = math.sqrt(sum(x * x for x in vec_a))
+    mag_b = math.sqrt(sum(x * x for x in vec_b))
+    if mag_a == 0.0 or mag_b == 0.0:
+        return 0.0
+    return _dot(vec_a, vec_b) / (mag_a * mag_b)
 
 
 class ChunkingStrategyComparator:
     """Run all built-in chunking strategies and compare their results."""
 
     def compare(self, text: str, chunk_size: int = 200) -> dict:
-        # TODO: call each chunker, compute stats, return comparison dict
-        raise NotImplementedError("Implement ChunkingStrategyComparator.compare")
+        fixed   = FixedSizeChunker(chunk_size=chunk_size, overlap=0).chunk(text)
+        sent    = SentenceChunker(max_sentences_per_chunk=3).chunk(text)
+        recurse = RecursiveChunker(chunk_size=chunk_size).chunk(text)
+
+        def stats(chunks: list[str]) -> dict:
+            count = len(chunks)
+            avg = sum(len(c) for c in chunks) / count if count else 0.0
+            return {"count": count, "avg_length": round(avg, 2), "chunks": chunks}
+
+        return {
+            "fixed_size":   stats(fixed),
+            "by_sentences": stats(sent),
+            "recursive":    stats(recurse),
+        }
