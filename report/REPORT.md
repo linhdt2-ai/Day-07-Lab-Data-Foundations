@@ -1,7 +1,7 @@
 # Báo Cáo Lab 7: Embedding & Vector Store
 
 **Họ tên:** Dương Thế Linh
-**Nhóm:** Nhóm C401
+**Nhóm:** Nhóm D5 Phòng C401
 **Ngày:** 05/06/2026
 
 ---
